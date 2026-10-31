@@ -193,9 +193,9 @@ export default function FeedPage() {
             <Link href="/" className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-brand-500">
               <Home className="h-5 w-5" /> Home
             </Link>
-            <span className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600">
+            <Link href="/friends" className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
               <Users className="h-5 w-5" /> Friends
-            </span>
+            </Link>
             <span className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600">
               <MessageSquare className="h-5 w-5" /> Messages
             </span>
@@ -257,7 +257,11 @@ export default function FeedPage() {
               </div>
             </Link>
             <div className="space-y-2 text-sm text-slate-600">
-              <p>Friends: {me.counts.following}</p>
+              <p>
+                <Link href="/friends" className="hover:underline">
+                  Friends: {me.counts.following}
+                </Link>
+              </p>
               <p>Followers: {me.counts.followers}</p>
               <p>Posts: {me.counts.posts}</p>
             </div>
@@ -311,7 +315,7 @@ export default function FeedPage() {
           )}
 
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} meId={me.id} />
           ))}
 
           {nextCursor && (
@@ -398,6 +402,9 @@ export default function FeedPage() {
               {totalUnreadMessages}
             </span>
           )}
+        </Link>
+        <Link href="/friends" className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
+          <Users className="h-5 w-5" /> Friends
         </Link>
         <Link href={`/profile/${me.username}`} className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
           <UserCircle2 className="h-5 w-5" /> Profile

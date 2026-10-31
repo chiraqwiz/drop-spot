@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Avatar, timeAgo } from './ui';
 import type { FeedPost } from './Composer';
 
@@ -12,12 +12,21 @@ type Comment = {
   user: { id: string; name: string; username: string; avatarUrl: string | null };
 };
 
-export default function PostCard({ post: initial }: { post: FeedPost }) {
+export default function PostCard({ post: initial, meId }: { post: FeedPost; meId?: string }) {
   const [post, setPost] = useState(initial);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const isMine = !!meId && meId === post.user.id;
+  const [editing, setEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState('');
+  const [editMediaUrl, setEditMediaUrl] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreview, setEditPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   async function toggleLike() {
     const res = await fetch(`/api/posts/${post.id}/like`, { method: 'POST' });
@@ -55,6 +64,76 @@ export default function PostCard({ post: initial }: { post: FeedPost }) {
     setDraft('');
   }
 
+  function startEdit() {
+    setEditCaption(post.caption ?? '');
+    setEditMediaUrl(post.mediaUrl ?? '');
+    setEditFile(null);
+    setEditPreview(null);
+    setEditError('');
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setEditFile(null);
+    setEditPreview(null);
+    setEditError('');
+  }
+
+  function pickEdit(f: File | undefined) {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) {
+      setEditError('Please choose an image file.');
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setEditError('Image must be 5MB or smaller.');
+      return;
+    }
+    setEditError('');
+    setEditFile(f);
+    setEditPreview(URL.createObjectURL(f));
+  }
+
+  async function saveEdit() {
+    if (!editCaption.trim()) {
+      setEditError('Caption is required.');
+      return;
+    }
+    setSaving(true);
+    setEditError('');
+
+    let finalMediaUrl = editMediaUrl;
+    if (editFile) {
+      const form = new FormData();
+      form.append('file', editFile);
+      const up = await fetch('/api/upload', { method: 'POST', body: form });
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        setEditError(upData.error ?? 'Photo upload failed.');
+        setSaving(false);
+        return;
+      }
+      finalMediaUrl = upData.url;
+    }
+
+    const res = await fetch(`/api/posts/${post.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caption: editCaption.trim(), mediaUrl: finalMediaUrl }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setSaving(false);
+    if (!res.ok) {
+      setEditError(data.error ?? 'Could not save. Try again.');
+      return;
+    }
+    setPost((p) => ({ ...p, ...data.post }));
+    setEditing(false);
+    setEditFile(null);
+    setEditPreview(null);
+  }
+
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-soft">
       <div className="flex items-center justify-between p-4">
@@ -67,12 +146,88 @@ export default function PostCard({ post: initial }: { post: FeedPost }) {
             </p>
           </div>
         </Link>
+        {isMine && !editing && (
+          <button onClick={startEdit} className="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100">
+            Edit
+          </button>
+        )}
       </div>
 
-      {post.caption && <p className="px-4 pb-3 text-sm leading-6 text-slate-700">{post.caption}</p>}
-      {post.mediaUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.mediaUrl} alt="" className="h-80 w-full object-cover" />
+      {editing ? (
+        <div className="space-y-3 px-4 pb-4">
+          <textarea
+            value={editCaption}
+            onChange={(e) => setEditCaption(e.target.value)}
+            rows={3}
+            className="w-full resize-none rounded-2xl bg-slate-100 px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
+          />
+          {(editPreview || editMediaUrl) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={editPreview ?? editMediaUrl} alt="" className="h-64 w-full rounded-2xl object-cover" />
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => editInputRef.current?.click()}
+              className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+            >
+              {editFile || editMediaUrl ? 'Change photo' : 'Add a photo'}
+            </button>
+            {(editFile || editMediaUrl) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditFile(null);
+                  setEditPreview(null);
+                  setEditMediaUrl('');
+                }}
+                className="text-sm text-slate-500"
+              >
+                Remove
+              </button>
+            )}
+            <input
+              ref={editInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickEdit(e.target.files?.[0])}
+            />
+          </div>
+          {!editFile && (
+            <input
+              value={editMediaUrl}
+              onChange={(e) => setEditMediaUrl(e.target.value)}
+              placeholder="Or paste an image URL (empty removes the photo)"
+              className="w-full rounded-full bg-slate-100 px-4 py-2 text-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
+            />
+          )}
+          {editError && <p className="text-sm text-red-600">{editError}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={saveEdit}
+              disabled={saving}
+              className="rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={cancelEdit}
+              disabled={saving}
+              className="rounded-full bg-slate-200 px-5 py-2 text-sm font-semibold text-slate-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {post.caption && <p className="px-4 pb-3 text-sm leading-6 text-slate-700">{post.caption}</p>}
+          {post.mediaUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={post.mediaUrl} alt="" className="h-80 w-full object-cover" />
+          )}
+        </>
       )}
 
       <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm text-slate-500">
