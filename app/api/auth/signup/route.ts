@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma, userPublicSelect } from '@/lib/prisma';
-import { hashPassword, setSessionCookie, signSession, usernameFromEmail } from '@/lib/auth';
+import { hashPassword, usernameFromEmail } from '@/lib/auth';
+import { isEmailConfigured, sendVerificationEmail } from '@/lib/mail';
+import {
+  VERIFY_CODE_TTL_MS,
+  generateVerificationCode,
+  hashVerificationCode,
+} from '@/lib/verification';
 
 const bodySchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -40,10 +46,24 @@ export async function POST(req: Request) {
       email,
       username,
       passwordHash: await hashPassword(password),
+      emailVerified: false,
     },
     select: userPublicSelect,
   });
 
-  setSessionCookie(signSession(user.id));
-  return NextResponse.json({ user }, { status: 201 });
+  // Send a verification code — the account stays unverified until it is entered.
+  const code = generateVerificationCode();
+  await prisma.verificationCode.create({
+    data: {
+      userId: user.id,
+      channel: 'email',
+      codeHash: hashVerificationCode(code),
+      expiresAt: new Date(Date.now() + VERIFY_CODE_TTL_MS),
+    },
+  });
+  if (isEmailConfigured()) {
+    await sendVerificationEmail(email, name, code).catch(() => null);
+  }
+
+  return NextResponse.json({ user, needsVerification: true, email }, { status: 201 });
 }

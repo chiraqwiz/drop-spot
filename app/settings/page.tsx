@@ -4,6 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/ui';
+import PhotoCropper, { type AspectOption } from '@/components/PhotoCropper';
+
+const BANNER_ASPECTS: AspectOption[] = [
+  { label: '3:1', value: 3 },
+  { label: 'Original', value: 'original' },
+  { label: '16:9', value: 16 / 9 },
+  { label: '4:1', value: 4 },
+];
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,12 +21,21 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
+  const [bannerCropFile, setBannerCropFile] = useState<File | null>(null);
+  const [removeBanner, setRemoveBanner] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -32,6 +49,7 @@ export default function SettingsPage() {
       setUsername(data.user.username);
       setBio(data.user.bio ?? '');
       setAvatarUrl(data.user.avatarUrl ?? null);
+      setBannerUrl(data.user.bannerUrl ?? null);
       setLoading(false);
     })();
   }, [router]);
@@ -47,9 +65,23 @@ export default function SettingsPage() {
       return;
     }
     setError('');
-    setFile(f);
-    setRemovePhoto(false);
-    setPreview(URL.createObjectURL(f));
+    setCropFile(f);
+    setCropSrc(URL.createObjectURL(f));
+  }
+
+  function pickBannerFile(f: File | undefined) {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError('Image must be 5MB or smaller.');
+      return;
+    }
+    setError('');
+    setBannerCropFile(f);
+    setBannerCropSrc(URL.createObjectURL(f));
   }
 
   async function save(e: React.FormEvent) {
@@ -74,6 +106,22 @@ export default function SettingsPage() {
       nextAvatarUrl = upData.url;
     }
 
+    let nextBannerUrl: string | undefined;
+    if (removeBanner) {
+      nextBannerUrl = '';
+    } else if (bannerFile) {
+      const form = new FormData();
+      form.append('file', bannerFile);
+      const up = await fetch('/api/upload', { method: 'POST', body: form });
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        setError(upData.error ?? 'Banner upload failed.');
+        setBusy(false);
+        return;
+      }
+      nextBannerUrl = upData.url;
+    }
+
     const res = await fetch('/api/auth/me', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -82,6 +130,7 @@ export default function SettingsPage() {
         username,
         bio,
         ...(nextAvatarUrl !== undefined ? { avatarUrl: nextAvatarUrl } : {}),
+        ...(nextBannerUrl !== undefined ? { bannerUrl: nextBannerUrl } : {}),
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -94,6 +143,10 @@ export default function SettingsPage() {
     setPreview(null);
     setFile(null);
     setRemovePhoto(false);
+    setBannerUrl(data.user.bannerUrl ?? null);
+    setBannerPreview(null);
+    setBannerFile(null);
+    setRemoveBanner(false);
     setUsername(data.user.username);
     setSaved(true);
   }
@@ -108,6 +161,45 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
+      {cropSrc && cropFile && (
+        <PhotoCropper
+          imageSrc={cropSrc}
+          originalFile={cropFile}
+          aspects={[{ label: 'Square', value: 1 }]}
+          cropShape="round"
+          title="Crop profile photo"
+          onClose={() => {
+            setCropSrc(null);
+            setCropFile(null);
+          }}
+          onDone={(cropped) => {
+            setFile(cropped);
+            setRemovePhoto(false);
+            setPreview(URL.createObjectURL(cropped));
+            setCropSrc(null);
+            setCropFile(null);
+          }}
+        />
+      )}
+      {bannerCropSrc && bannerCropFile && (
+        <PhotoCropper
+          imageSrc={bannerCropSrc}
+          originalFile={bannerCropFile}
+          aspects={BANNER_ASPECTS}
+          title="Crop banner"
+          onClose={() => {
+            setBannerCropSrc(null);
+            setBannerCropFile(null);
+          }}
+          onDone={(cropped) => {
+            setBannerFile(cropped);
+            setRemoveBanner(false);
+            setBannerPreview(URL.createObjectURL(cropped));
+            setBannerCropSrc(null);
+            setBannerCropFile(null);
+          }}
+        />
+      )}
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-3">
@@ -168,6 +260,61 @@ export default function SettingsPage() {
               />
             </div>
             {removePhoto && <p className="text-sm text-slate-500">Your photo will be removed when you save.</p>}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Profile banner</label>
+              {(bannerPreview ?? bannerUrl) && !removeBanner ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bannerPreview ?? bannerUrl ?? ''}
+                  alt="Banner preview"
+                  className="mb-3 h-32 w-full rounded-2xl object-cover"
+                />
+              ) : (
+                <div className="mb-3 flex h-32 w-full items-center justify-center rounded-2xl bg-slate-200 text-sm text-slate-500">
+                  No banner yet
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  {bannerUrl || bannerPreview ? 'Change banner' : 'Add banner'}
+                </button>
+                {bannerUrl && !removeBanner && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemoveBanner(true);
+                      setBannerFile(null);
+                      setBannerPreview(null);
+                    }}
+                    className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                  >
+                    Remove banner
+                  </button>
+                )}
+                {removeBanner && (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveBanner(false)}
+                    className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                  >
+                    Keep banner
+                  </button>
+                )}
+              </div>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => pickBannerFile(e.target.files?.[0])}
+              />
+              {removeBanner && <p className="mt-1 text-sm text-slate-500">Your banner will be removed when you save.</p>}
+            </div>
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>

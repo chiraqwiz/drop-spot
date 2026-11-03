@@ -16,6 +16,7 @@ export const userPublicSelect = {
   username: true,
   bio: true,
   avatarUrl: true,
+  bannerUrl: true,
   isVerified: true,
   createdAt: true,
 } as const;

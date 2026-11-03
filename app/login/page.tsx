@@ -24,6 +24,10 @@ export default function LoginPage() {
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
+      if (data.needsVerification && data.email) {
+        router.push(`/verify?email=${encodeURIComponent(data.email)}`);
+        return;
+      }
       setError(data.error ?? 'Could not log in');
       return;
     }
@@ -65,6 +69,9 @@ export default function LoginPage() {
           >
             {busy ? 'Logging in…' : 'Log in'}
           </button>
+          <Link href="/forgot-password" className="block text-center text-sm font-semibold text-brand-500">
+            Forgot password?
+          </Link>
         </form>
         <p className="mt-4 text-center text-sm text-slate-600">
           New here?{' '}

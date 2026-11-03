@@ -52,6 +52,8 @@ model User {
   username     String        @unique
   bio          String?
   avatarUrl    String?
+  bannerUrl    String?
+  emailVerified Boolean @default(false)
   role         UserRole      @default(USER)
   status       AccountStatus @default(ACTIVE)
   isVerified   Boolean       @default(false)
@@ -72,6 +74,8 @@ model User {
   receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
   stories                 Story[]
   storyViews             StoryView[]
+  passwordResetTokens PasswordResetToken[]
+  verificationCodes VerificationCode[]
 
   @@index([email])
   @@index([username])
@@ -84,6 +88,7 @@ model Post {
   userId        String
   caption       String?
   mediaUrl      String?
+  mediaType     String? // 'image' | 'video'; null treated as image
   likesCount    Int      @default(0)
   commentsCount Int      @default(0)
   createdAt     DateTime @default(now())
@@ -114,7 +119,9 @@ model Comment {
   id        String   @id @default(cuid())
   userId    String
   postId    String
-  body      String
+  body      String?
+  mediaUrl  String?
+  mediaType String? // 'image' | 'video'
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -243,4 +250,32 @@ model StoryView {
 
   @@unique([storyId, viewerId])
   @@index([storyId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  channel   String   @default("email")
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

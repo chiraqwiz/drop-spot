@@ -6,6 +6,7 @@ import { prisma, userPublicSelect } from '@/lib/prisma';
 const createSchema = z.object({
   caption: z.string().trim().min(1).max(2000),
   mediaUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
+  mediaType: z.enum(['image', 'video']).optional(),
 });
 
 export async function GET(req: Request) {
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
       id: p.id,
       caption: p.caption,
       mediaUrl: p.mediaUrl,
+      mediaType: p.mediaType ?? (p.mediaUrl ? 'image' : null),
       createdAt: p.createdAt,
       likesCount: p._count.likes,
       commentsCount: p._count.comments,
@@ -68,9 +70,34 @@ export async function POST(req: Request) {
       userId: user.id,
       caption: parsed.data.caption,
       mediaUrl: parsed.data.mediaUrl || null,
+      mediaType: parsed.data.mediaUrl ? parsed.data.mediaType ?? 'image' : null,
     },
     include: { user: { select: userPublicSelect } },
   });
+
+  // Notify the author's friends about the new post (photos, videos, or text).
+  const followers = await prisma.follow.findMany({
+    where: { followingId: user.id },
+    select: { followerId: true },
+  });
+  const seen = new Set<string>();
+  const friendIds: string[] = [];
+  for (const f of followers) {
+    if (f.followerId !== user.id && !seen.has(f.followerId)) {
+      seen.add(f.followerId);
+      friendIds.push(f.followerId);
+    }
+  }
+  if (friendIds.length > 0) {
+    const label = !post.mediaUrl ? 'a new post' : post.mediaType === 'video' ? 'a new video' : 'a new photo';
+    await prisma.notification.createMany({
+      data: friendIds.map((id) => ({
+        userId: id,
+        type: 'post',
+        message: `${user.name} shared ${label}.`,
+      })),
+    });
+  }
 
   return NextResponse.json(
     {
@@ -78,6 +105,7 @@ export async function POST(req: Request) {
         id: post.id,
         caption: post.caption,
         mediaUrl: post.mediaUrl,
+        mediaType: post.mediaType,
         createdAt: post.createdAt,
         likesCount: 0,
         commentsCount: 0,

@@ -20,9 +20,9 @@ export function Avatar({
 }: {
   name: string;
   avatarUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
-  const sizeClass = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-12 w-12' : 'h-11 w-11';
+  const sizeClass = size === 'sm' ? 'h-9 w-9 text-xs' : size === 'lg' ? 'h-12 w-12' : size === 'xl' ? 'h-24 w-24 text-xl' : 'h-11 w-11';
   if (avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={avatarUrl} alt={name} className={`${sizeClass} shrink-0 rounded-full object-cover`} />;

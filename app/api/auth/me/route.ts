@@ -13,6 +13,7 @@ const updateSchema = z.object({
     .optional(),
   bio: z.string().trim().max(200).optional(),
   avatarUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
+  bannerUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
 });
 
 export async function PATCH(req: Request) {
@@ -37,6 +38,9 @@ export async function PATCH(req: Request) {
       ...(parsed.data.avatarUrl !== undefined
         ? { avatarUrl: parsed.data.avatarUrl || null }
         : {}),
+      ...(parsed.data.bannerUrl !== undefined
+        ? { bannerUrl: parsed.data.bannerUrl || null }
+        : {}),
       ...(username ? { username } : {}),
     },
     select: {
@@ -45,6 +49,7 @@ export async function PATCH(req: Request) {
       username: true,
       bio: true,
       avatarUrl: true,
+      bannerUrl: true,
       isVerified: true,
       createdAt: true,
     },
@@ -70,6 +75,7 @@ export async function GET() {
       username: user.username,
       bio: user.bio,
       avatarUrl: user.avatarUrl,
+      bannerUrl: user.bannerUrl,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
       counts: { followers, following, posts },

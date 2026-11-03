@@ -7,6 +7,7 @@ const editSchema = z
   .object({
     caption: z.string().trim().min(1).max(2000).optional(),
     mediaUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
+    mediaType: z.enum(['image', 'video']).optional(),
   })
   .refine((d) => d.caption !== undefined || d.mediaUrl !== undefined, {
     message: 'Nothing to update',
@@ -28,9 +29,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'Caption is required (up to 2000 characters)' }, { status: 400 });
   }
 
-  const data: { caption?: string; mediaUrl?: string | null } = {};
+  const data: { caption?: string; mediaUrl?: string | null; mediaType?: string | null } = {};
   if (parsed.data.caption !== undefined) data.caption = parsed.data.caption;
-  if (parsed.data.mediaUrl !== undefined) data.mediaUrl = parsed.data.mediaUrl || null;
+  if (parsed.data.mediaUrl !== undefined) {
+    data.mediaUrl = parsed.data.mediaUrl || null;
+    data.mediaType = parsed.data.mediaUrl ? parsed.data.mediaType ?? 'image' : null;
+  }
 
   const updated = await prisma.post.update({
     where: { id: post.id },
@@ -47,6 +51,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       id: updated.id,
       caption: updated.caption,
       mediaUrl: updated.mediaUrl,
+      mediaType: updated.mediaType,
       createdAt: updated.createdAt,
       likesCount: updated._count.likes,
       commentsCount: updated._count.comments,

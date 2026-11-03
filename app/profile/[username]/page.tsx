@@ -14,6 +14,7 @@ type Profile = {
   username: string;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   counts: { followers: number; following: number; posts: number };
   relationship: 'self' | 'friends' | 'outgoing' | 'incoming' | 'none';
   incomingRequestId: string | null;
@@ -120,16 +121,38 @@ export default function ProfilePage({ params }: { params: { username: string } }
       </header>
 
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <div className="rounded-2xl bg-white p-6 shadow-soft">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar name={profile.name} avatarUrl={profile.avatarUrl} size="lg" />
-              <div>
-                <h1 className="text-xl font-bold">{profile.name}</h1>
-                <p className="text-sm text-slate-500">@{profile.username}</p>
-                {profile.bio && <p className="mt-1 text-sm text-slate-700">{profile.bio}</p>}
+        <div className="overflow-hidden rounded-2xl bg-white shadow-soft">
+          {profile.bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.bannerUrl}
+              alt={`${profile.name}'s profile banner`}
+              className="h-44 w-full object-cover sm:h-56"
+            />
+          ) : (
+            <div className="h-28 w-full bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 sm:h-36" />
+          )}
+          <div className="px-6 pb-6">
+            <div className="-mt-12 flex justify-center sm:-mt-14">
+              <div className="rounded-full ring-4 ring-white">
+                <Avatar name={profile.name} avatarUrl={profile.avatarUrl} size="xl" />
               </div>
             </div>
+            <h1 className="mt-3 text-center text-xl font-bold">{profile.name}</h1>
+            <p className="text-center text-sm text-slate-500">@{profile.username}</p>
+            {profile.bio && <p className="mt-1 text-center text-sm text-slate-700">{profile.bio}</p>}
+            <div className="mt-3 flex justify-center gap-6 text-sm text-slate-600">
+              <span>
+                <strong className="text-slate-900">{profile.counts.posts}</strong> posts
+              </span>
+              <span>
+                <strong className="text-slate-900">{profile.counts.followers}</strong> followers
+              </span>
+              <span>
+                <strong className="text-slate-900">{profile.counts.following}</strong> following
+              </span>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
             {profile.relationship === 'self' && (
               <Link
                 href="/settings"
@@ -187,17 +210,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                 Message
               </Link>
             )}
-          </div>
-          <div className="mt-4 flex gap-6 text-sm text-slate-600">
-            <span>
-              <strong className="text-slate-900">{profile.counts.posts}</strong> posts
-            </span>
-            <span>
-              <strong className="text-slate-900">{profile.counts.followers}</strong> followers
-            </span>
-            <span>
-              <strong className="text-slate-900">{profile.counts.following}</strong> following
-            </span>
+            </div>
           </div>
         </div>
 

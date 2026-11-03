@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { Avatar } from './ui';
+import PhotoCropper, { type AspectOption } from './PhotoCropper';
+
+const STORY_ASPECTS: AspectOption[] = [
+  { label: 'Original', value: 'original' },
+  { label: '9:16', value: 9 / 16 },
+  { label: '1:1', value: 1 },
+  { label: '4:5', value: 4 / 5 },
+];
 
 export type StoryItem = {
   id: string;
@@ -234,6 +242,8 @@ function StoryComposer({ onClose, onPosted }: { onClose: () => void; onPosted: (
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -248,8 +258,8 @@ function StoryComposer({ onClose, onPosted }: { onClose: () => void; onPosted: (
       return;
     }
     setError('');
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    setCropFile(f);
+    setCropSrc(URL.createObjectURL(f));
   }
 
   async function post() {
@@ -290,6 +300,24 @@ function StoryComposer({ onClose, onPosted }: { onClose: () => void; onPosted: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center">
+      {cropSrc && cropFile && (
+        <PhotoCropper
+          imageSrc={cropSrc}
+          originalFile={cropFile}
+          aspects={STORY_ASPECTS}
+          title="Crop story photo"
+          onClose={() => {
+            setCropSrc(null);
+            setCropFile(null);
+          }}
+          onDone={(cropped) => {
+            setFile(cropped);
+            setPreview(URL.createObjectURL(cropped));
+            setCropSrc(null);
+            setCropFile(null);
+          }}
+        />
+      )}
       <div className="w-full max-w-md rounded-t-3xl bg-white p-5 text-slate-900 sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Add to your story</h2>

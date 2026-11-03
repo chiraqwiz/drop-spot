@@ -48,6 +48,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
       username: profile.username,
       bio: profile.bio,
       avatarUrl: profile.avatarUrl,
+      bannerUrl: profile.bannerUrl,
       isVerified: profile.isVerified,
       createdAt: profile.createdAt,
       counts: {
@@ -70,6 +71,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
       id: p.id,
       caption: p.caption,
       mediaUrl: p.mediaUrl,
+      mediaType: p.mediaType ?? (p.mediaUrl ? 'image' : null),
       createdAt: p.createdAt,
       likesCount: p._count.likes,
       commentsCount: p._count.comments,
