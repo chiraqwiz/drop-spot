@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { Avatar, timeAgo } from './ui';
 import PhotoCropper from './PhotoCropper';
+import { uploadFile } from '@/lib/blobUpload';
 import { POST_ASPECTS, type FeedPost } from './Composer';
 
 type Comment = {
@@ -98,7 +99,7 @@ export default function PostCard({ post: initial, meId }: { post: FeedPost; meId
     const isVideo = f.type.startsWith('video/');
     const isImage = f.type.startsWith('image/');
     if (!isImage && !isVideo) return;
-    const maxBytes = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : 5 * 1024 * 1024;
     if (f.size > maxBytes) return;
     setCommentFile(f);
     setCommentMediaKind(isVideo ? 'video' : 'image');
@@ -124,15 +125,12 @@ export default function PostCard({ post: initial, meId }: { post: FeedPost; meId
     let mediaUrl: string | undefined;
     let mediaType: 'image' | 'video' | undefined;
     if (commentFile) {
-      const form = new FormData();
-      form.append('file', commentFile);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
+      try {
+        mediaUrl = await uploadFile(commentFile);
+      } catch {
         setBusy(false);
         return;
       }
-      mediaUrl = upData.url;
       mediaType = commentMediaKind ?? 'image';
     }
 
@@ -183,9 +181,9 @@ export default function PostCard({ post: initial, meId }: { post: FeedPost; meId
       setEditError('Please choose a photo or video file.');
       return;
     }
-    const maxBytes = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : 5 * 1024 * 1024;
     if (f.size > maxBytes) {
-      setEditError(isVideo ? 'Video must be 50MB or smaller.' : 'Image must be 5MB or smaller.');
+      setEditError(isVideo ? 'Video must be 500MB or smaller.' : 'Image must be 5MB or smaller.');
       return;
     }
     setEditError('');
@@ -201,8 +199,8 @@ export default function PostCard({ post: initial, meId }: { post: FeedPost; meId
   }
 
   async function saveEdit() {
-    if (!editCaption.trim()) {
-      setEditError('Caption is required.');
+    if (!editCaption.trim() && !editFile && !editMediaUrl) {
+      setEditError('Add some words or keep a photo or video.');
       return;
     }
     setSaving(true);
@@ -210,16 +208,13 @@ export default function PostCard({ post: initial, meId }: { post: FeedPost; meId
 
     let finalMediaUrl = editMediaUrl;
     if (editFile) {
-      const form = new FormData();
-      form.append('file', editFile);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setEditError(upData.error ?? 'Photo upload failed.');
+      try {
+        finalMediaUrl = await uploadFile(editFile);
+      } catch {
+        setEditError('Photo upload failed.');
         setSaving(false);
         return;
       }
-      finalMediaUrl = upData.url;
     }
 
     const res = await fetch(`/api/posts/${post.id}`, {

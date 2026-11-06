@@ -28,11 +28,12 @@ export async function GET() {
   for (const m of messages) {
     const other = m.senderId === me.id ? m.receiver : m.sender;
     if (!byOther.has(other.id)) {
+      const preview = m.body || (m.mediaType === 'video' ? '🎥 Video' : m.mediaUrl ? '📷 Photo' : '');
       byOther.set(other.id, {
         user: other,
         lastMessage: {
           id: m.id,
-          body: m.body,
+          body: preview,
           createdAt: m.createdAt,
           fromMe: m.senderId === me.id,
         },

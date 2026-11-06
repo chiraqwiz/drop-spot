@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma, userPublicSelect } from '@/lib/prisma';
 import { hashPassword, usernameFromEmail } from '@/lib/auth';
 import { isEmailConfigured, sendVerificationEmail } from '@/lib/mail';
+import { parseDob } from '@/lib/dob';
 import {
   VERIFY_CODE_TTL_MS,
   generateVerificationCode,
@@ -14,6 +15,7 @@ const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
   username: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,30}$/).optional(),
+  dob: z.string(),
 });
 
 export async function POST(req: Request) {
@@ -22,6 +24,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid signup details' }, { status: 400 });
   }
   const { name, email, password } = parsed.data;
+
+  const dobResult = parseDob(parsed.data.dob);
+  if ('error' in dobResult) {
+    return NextResponse.json({ error: dobResult.error }, { status: 400 });
+  }
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, ...(parsed.data.username ? [{ username: parsed.data.username }] : [])] },
@@ -47,6 +54,7 @@ export async function POST(req: Request) {
       username,
       passwordHash: await hashPassword(password),
       emailVerified: false,
+      dob: dobResult.date,
     },
     select: userPublicSelect,
   });

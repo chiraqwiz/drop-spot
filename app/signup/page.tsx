@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [dob, setDob] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -26,6 +27,7 @@ export default function SignupPage() {
         email,
         username: username || undefined,
         password,
+        dob,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -78,6 +80,19 @@ export default function SignupPage() {
             placeholder="Password (8+ characters)"
             className="w-full rounded-full bg-slate-100 px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
           />
+          <label className="block">
+            <span className="mb-1 block px-4 text-xs font-medium text-slate-500">
+              Date of birth
+            </span>
+            <input
+              type="date"
+              required
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
+              className="w-full rounded-full bg-slate-100 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </label>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"

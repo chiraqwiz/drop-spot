@@ -3,11 +3,15 @@ import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma, userPublicSelect } from '@/lib/prisma';
 
-const createSchema = z.object({
-  caption: z.string().trim().min(1).max(2000),
-  mediaUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
-  mediaType: z.enum(['image', 'video']).optional(),
-});
+const createSchema = z
+  .object({
+    caption: z.string().trim().max(2000).optional(),
+    mediaUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
+    mediaType: z.enum(['image', 'video']).optional(),
+  })
+  .refine((d) => (d.caption ?? '').length > 0 || (d.mediaUrl ?? '').length > 0, {
+    message: 'Add some words or attach a photo or video',
+  });
 
 export async function GET(req: Request) {
   const user = await getSessionUser();
@@ -62,13 +66,16 @@ export async function POST(req: Request) {
 
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Post text is required (up to 2000 characters)' }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Could not create post' },
+      { status: 400 },
+    );
   }
 
   const post = await prisma.post.create({
     data: {
       userId: user.id,
-      caption: parsed.data.caption,
+      caption: parsed.data.caption || null,
       mediaUrl: parsed.data.mediaUrl || null,
       mediaType: parsed.data.mediaUrl ? parsed.data.mediaType ?? 'image' : null,
     },

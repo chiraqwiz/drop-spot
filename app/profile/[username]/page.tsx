@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import PostCard from '@/components/PostCard';
 import { Avatar } from '@/components/ui';
+import { formatDob } from '@/lib/dob';
+import { Cake } from 'lucide-react';
 import type { FeedPost } from '@/components/Composer';
 
 type Profile = {
@@ -15,6 +17,7 @@ type Profile = {
   bio: string | null;
   avatarUrl: string | null;
   bannerUrl: string | null;
+  dob: string | null;
   counts: { followers: number; following: number; posts: number };
   relationship: 'self' | 'friends' | 'outgoing' | 'incoming' | 'none';
   incomingRequestId: string | null;
@@ -141,6 +144,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
             <h1 className="mt-3 text-center text-xl font-bold">{profile.name}</h1>
             <p className="text-center text-sm text-slate-500">@{profile.username}</p>
             {profile.bio && <p className="mt-1 text-center text-sm text-slate-700">{profile.bio}</p>}
+            {profile.dob && (
+              <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-sm text-slate-500">
+                <Cake className="h-4 w-4" /> Born {formatDob(profile.dob)}
+              </p>
+            )}
             <div className="mt-3 flex justify-center gap-6 text-sm text-slate-600">
               <span>
                 <strong className="text-slate-900">{profile.counts.posts}</strong> posts

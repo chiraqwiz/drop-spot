@@ -4,9 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, Home, MessageSquare, Search, UserCircle2, Users } from 'lucide-react';
+import { Bell, Gamepad2, Home, MessageSquare, Radio, Search, UserCircle2, Users } from 'lucide-react';
 import Composer, { type FeedPost } from '@/components/Composer';
 import PostCard from '@/components/PostCard';
+import PushPrompt from '@/components/PushPrompt';
 import Stories, { type StoryGroup } from '@/components/Stories';
 import { Avatar } from '@/components/ui';
 
@@ -24,7 +25,7 @@ type FriendRequest = {
   id: string;
   sender: { id: string; name: string; username: string; avatarUrl: string | null };
 };
-type Notification = { id: string; type: string; message: string; read: boolean; createdAt: string };
+type Notification = { id: string; type: string; message: string; read: boolean; createdAt: string; actionUrl?: string | null };
 
 export default function FeedPage() {
   const router = useRouter();
@@ -44,6 +45,13 @@ export default function FeedPage() {
     }[]
   >([]);
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  const [liveStreams, setLiveStreams] = useState<
+    {
+      id: string;
+      title: string;
+      broadcaster: { id: string; name: string; username: string; avatarUrl: string | null };
+    }[]
+  >([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SuggestedUser[]>([]);
@@ -58,13 +66,14 @@ export default function FeedPage() {
       }
       const meData = await meRes.json();
       setMe(meData.user);
-      const [postsRes, reqRes, sugRes, notifRes, storiesRes, msgsRes] = await Promise.all([
+      const [postsRes, reqRes, sugRes, notifRes, storiesRes, msgsRes, liveRes] = await Promise.all([
         fetch('/api/posts'),
         fetch('/api/friend-requests'),
         fetch('/api/users?suggest=1'),
         fetch('/api/notifications'),
         fetch('/api/stories'),
         fetch('/api/messages'),
+        fetch('/api/live'),
       ]);
       if (postsRes.ok) {
         const d = await postsRes.json();
@@ -72,6 +81,7 @@ export default function FeedPage() {
         setNextCursor(d.nextCursor);
       }
       if (storiesRes.ok) setStoryGroups((await storiesRes.json()).groups);
+      if (liveRes.ok) setLiveStreams((await liveRes.json()).streams);
       if (msgsRes.ok) {
         const d = await msgsRes.json();
         setConversations(d.conversations.slice(0, 5));
@@ -86,6 +96,11 @@ export default function FeedPage() {
       }
       setLoading(false);
     })();
+    const liveTimer = setInterval(async () => {
+      const res = await fetch('/api/live');
+      if (res.ok) setLiveStreams((await res.json()).streams);
+    }, 30000);
+    return () => clearInterval(liveTimer);
   }, [router]);
 
   const search = useCallback(async (q: string) => {
@@ -196,6 +211,15 @@ export default function FeedPage() {
             <Link href="/friends" className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
               <Users className="h-5 w-5" /> Friends
             </Link>
+            <Link href="/games" className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+              <Gamepad2 className="h-5 w-5" /> Games
+            </Link>
+            <Link href="/live" className="relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
+              <Radio className="h-5 w-5" /> Live
+              {liveStreams.length > 0 && (
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+              )}
+            </Link>
             <span className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-slate-600">
               <MessageSquare className="h-5 w-5" /> Messages
             </span>
@@ -219,9 +243,17 @@ export default function FeedPage() {
                   )}
                   <div className="space-y-2">
                     {notifications.map((n) => (
-                      <p key={n.id} className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                        {n.message}
-                      </p>
+                      <div key={n.id} className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-sm text-slate-600">{n.message}</p>
+                        {n.type === 'call' && n.actionUrl && (
+                          <Link
+                            href={n.actionUrl}
+                            className="mt-2 inline-block rounded-full bg-brand-500 px-4 py-1.5 text-xs font-bold text-white"
+                          >
+                            Join call
+                          </Link>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -304,6 +336,47 @@ export default function FeedPage() {
             }}
           />
           <Composer meName={me.name} meAvatarUrl={me.avatarUrl} onPosted={(post) => setPosts((p) => [post, ...p])} />
+          <PushPrompt />
+
+          <div className="rounded-2xl bg-white p-4 shadow-soft">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold">
+                <Radio className="h-4 w-4 text-red-500" /> Live now
+              </h3>
+              <Link href="/live" className="text-xs font-semibold text-brand-500">
+                See all
+              </Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              <Link
+                href="/live"
+                className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-xl bg-red-50 p-3 text-center"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white">
+                  <Radio className="h-5 w-5" />
+                </span>
+                <span className="text-xs font-bold text-red-600">Go Live</span>
+              </Link>
+              {liveStreams.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/live/${s.id}`}
+                  className="relative w-24 shrink-0 rounded-xl bg-slate-100 p-3 text-center"
+                >
+                  <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    LIVE
+                  </span>
+                  <Avatar name={s.broadcaster.name} avatarUrl={s.broadcaster.avatarUrl} size="md" />
+                  <span className="mt-1 block truncate text-xs font-semibold">
+                    {s.broadcaster.name}
+                  </span>
+                </Link>
+              ))}
+              {liveStreams.length === 0 && (
+                <p className="self-center text-xs text-slate-400">Nobody is live right now.</p>
+              )}
+            </div>
+          </div>
 
           {posts.length === 0 && (
             <div className="rounded-2xl bg-white p-8 text-center shadow-soft">
@@ -405,6 +478,15 @@ export default function FeedPage() {
         </Link>
         <Link href="/friends" className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
           <Users className="h-5 w-5" /> Friends
+        </Link>
+        <Link href="/games" className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
+          <Gamepad2 className="h-5 w-5" /> Games
+        </Link>
+        <Link href="/live" className="relative flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
+          <Radio className="h-5 w-5" /> Live
+          {liveStreams.length > 0 && (
+            <span className="absolute -top-1 right-4 h-2 w-2 rounded-full bg-red-500" />
+          )}
         </Link>
         <Link href={`/profile/${me.username}`} className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
           <UserCircle2 className="h-5 w-5" /> Profile

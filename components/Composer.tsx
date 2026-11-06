@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Avatar } from './ui';
 import PhotoCropper, { type AspectOption } from './PhotoCropper';
+import { uploadFile } from '@/lib/blobUpload';
 
 export const POST_ASPECTS: AspectOption[] = [
   { label: 'Original', value: 'original' },
@@ -42,6 +43,7 @@ export default function Composer({
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,9 +55,9 @@ export default function Composer({
       setError('Please choose a photo or video file.');
       return;
     }
-    const maxBytes = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : 5 * 1024 * 1024;
     if (f.size > maxBytes) {
-      setError(isVideo ? 'Video must be 50MB or smaller.' : 'Image must be 5MB or smaller.');
+      setError(isVideo ? 'Video must be 500MB or smaller.' : 'Image must be 5MB or smaller.');
       return;
     }
     setError('');
@@ -71,23 +73,26 @@ export default function Composer({
   }
 
   async function submit() {
-    if (!caption.trim()) return;
+    const hasMedia = !!file || !!mediaUrl.trim();
+    if (!caption.trim() && !hasMedia) return;
     setBusy(true);
     setError('');
+    setUploadPct(null);
 
     let finalMediaUrl = mediaUrl.trim() || undefined;
     if (file) {
-      const form = new FormData();
-      form.append('file', file);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setError(upData.error ?? 'Photo upload failed.');
+      try {
+        finalMediaUrl = await uploadFile(file, (p) =>
+          setUploadPct(Math.round(p.percentage)),
+        );
+      } catch {
+        setError('Photo upload failed.');
         setBusy(false);
+        setUploadPct(null);
         return;
       }
-      finalMediaUrl = upData.url;
     }
+    setUploadPct(null);
 
     const res = await fetch('/api/posts', {
       method: 'POST',
@@ -154,6 +159,9 @@ export default function Composer({
                     playsInline
                     preload="metadata"
                     className="max-h-64 w-full rounded-2xl bg-black"
+                    onError={() =>
+                      setError("Couldn't preview that video — try a different one.")
+                    }
                   />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -210,10 +218,10 @@ export default function Composer({
         </button>
         <button
           onClick={submit}
-          disabled={busy || !caption.trim()}
+          disabled={busy || (!caption.trim() && !file && !mediaUrl.trim())}
           className="rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {busy ? 'Posting…' : 'Post'}
+          {busy ? (uploadPct !== null ? `Uploading ${uploadPct}%…` : 'Posting…') : 'Post'}
         </button>
       </div>
     </div>

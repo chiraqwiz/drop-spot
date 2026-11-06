@@ -53,6 +53,7 @@ model User {
   bio          String?
   avatarUrl    String?
   bannerUrl    String?
+  dob          DateTime? @db.Date
   emailVerified Boolean @default(false)
   role         UserRole      @default(USER)
   status       AccountStatus @default(ACTIVE)
@@ -72,10 +73,15 @@ model User {
   adminActions       AdminAuditLog[]
   sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
   receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  sentCallInvites     CallInvite[]       @relation("SentCallInvites")
+  receivedCallInvites CallInvite[]       @relation("ReceivedCallInvites")
+  pushSubscriptions   PushSubscription[]
   stories                 Story[]
   storyViews             StoryView[]
   passwordResetTokens PasswordResetToken[]
   verificationCodes VerificationCode[]
+  liveStreams     LiveStream[]
+  liveChatMessages LiveChatMessage[]
 
   @@index([email])
   @@index([username])
@@ -163,7 +169,9 @@ model Message {
   id         String   @id @default(cuid())
   senderId   String
   receiverId String
-  body       String
+  body       String?
+  mediaUrl   String?
+  mediaType  String?
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
@@ -180,12 +188,28 @@ model Notification {
   type      String
   message   String
   read      Boolean  @default(false)
+  actionUrl String?
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([read])
+}
+
+model CallInvite {
+  id         String   @id @default(cuid())
+  callerId   String
+  receiverId String
+  roomId     String   @unique
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+
+  caller   User @relation("SentCallInvites", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedCallInvites", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId])
+  @@index([status])
 }
 
 model ModerationCase {
@@ -276,6 +300,49 @@ model VerificationCode {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LiveStream {
+  id             String   @id @default(cuid())
+  broadcasterId  String
+  broadcaster    User     @relation(fields: [broadcasterId], references: [id], onDelete: Cascade)
+  title          String   @default("")
+  channelArn     String   @unique
+  streamKeyArn   String
+  playbackUrl    String
+  ingestEndpoint String
+  status         String   @default("CREATED") // CREATED | LIVE | ENDED
+  startedAt      DateTime?
+  endedAt        DateTime?
+  createdAt      DateTime @default(now())
+  messages       LiveChatMessage[]
+
+  @@index([broadcasterId])
+  @@index([status])
+}
+
+model LiveChatMessage {
+  id        String     @id @default(cuid())
+  streamId  String
+  stream    LiveStream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime   @default(now())
+
+  @@index([streamId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }

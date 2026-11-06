@@ -57,7 +57,7 @@ function VerifyForm() {
       setError(data.error ?? 'Could not verify. Try again.');
       return;
     }
-    router.push('/');
+    router.push('/welcome');
   }
 
   async function resend() {

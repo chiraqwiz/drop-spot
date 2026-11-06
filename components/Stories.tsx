@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { Avatar } from './ui';
 import PhotoCropper, { type AspectOption } from './PhotoCropper';
+import { uploadFile } from '@/lib/blobUpload';
 
 const STORY_ASPECTS: AspectOption[] = [
   { label: 'Original', value: 'original' },
@@ -272,16 +273,13 @@ function StoryComposer({ onClose, onPosted }: { onClose: () => void; onPosted: (
 
     let mediaUrl: string | undefined;
     if (file) {
-      const form = new FormData();
-      form.append('file', file);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setError(upData.error ?? 'Photo upload failed.');
+      try {
+        mediaUrl = await uploadFile(file);
+      } catch {
+        setError('Photo upload failed.');
         setBusy(false);
         return;
       }
-      mediaUrl = upData.url;
     }
 
     const res = await fetch('/api/stories', {

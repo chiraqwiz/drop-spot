@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseDob } from '@/lib/dob';
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
@@ -14,6 +15,7 @@ const updateSchema = z.object({
   bio: z.string().trim().max(200).optional(),
   avatarUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
   bannerUrl: z.string().trim().url().max(2048).optional().or(z.literal('')),
+  dob: z.string().optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -25,16 +27,26 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Invalid profile details' }, { status: 400 });
   }
 
-  const { username, ...rest } = parsed.data;
+  const { username, dob, ...rest } = parsed.data;
   if (username && username !== user.username) {
     const taken = await prisma.user.findUnique({ where: { username } });
     if (taken) return NextResponse.json({ error: 'That username is taken' }, { status: 409 });
+  }
+
+  let dobDate: Date | undefined;
+  if (dob !== undefined) {
+    const dobResult = parseDob(dob);
+    if ('error' in dobResult) {
+      return NextResponse.json({ error: dobResult.error }, { status: 400 });
+    }
+    dobDate = dobResult.date;
   }
 
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
       ...rest,
+      ...(dobDate !== undefined ? { dob: dobDate } : {}),
       ...(parsed.data.avatarUrl !== undefined
         ? { avatarUrl: parsed.data.avatarUrl || null }
         : {}),
@@ -50,6 +62,7 @@ export async function PATCH(req: Request) {
       bio: true,
       avatarUrl: true,
       bannerUrl: true,
+      dob: true,
       isVerified: true,
       createdAt: true,
     },
@@ -76,6 +89,7 @@ export async function GET() {
       bio: user.bio,
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
+      dob: user.dob,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
       counts: { followers, following, posts },

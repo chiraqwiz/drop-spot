@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/ui';
 import PhotoCropper, { type AspectOption } from '@/components/PhotoCropper';
+import { uploadFile } from '@/lib/blobUpload';
+import { dobToInputValue } from '@/lib/dob';
+import { getPushState, pushSupported, subscribeForPush, unsubscribeFromPush, type PushState } from '@/lib/pushClient';
 
 const BANNER_ASPECTS: AspectOption[] = [
   { label: '3:1', value: 3 },
@@ -13,11 +16,77 @@ const BANNER_ASPECTS: AspectOption[] = [
   { label: '4:1', value: 4 },
 ];
 
+function PushSettingsRow() {
+  const [state, setState] = useState<PushState>('off');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!pushSupported()) {
+      setState('unsupported');
+      return;
+    }
+    getPushState().then(setState);
+  }, []);
+
+  async function enable() {
+    setBusy(true);
+    await subscribeForPush().catch(() => false);
+    setBusy(false);
+    setState(await getPushState().catch(() => 'off' as PushState));
+  }
+
+  async function disable() {
+    setBusy(true);
+    await unsubscribeFromPush();
+    setBusy(false);
+    setState(await getPushState().catch(() => 'off' as PushState));
+  }
+
+  if (state === 'unsupported') {
+    return <p className="mt-3 text-sm text-slate-500">This browser does not support notifications.</p>;
+  }
+  if (state === 'blocked') {
+    return (
+      <p className="mt-3 text-sm text-slate-500">
+        Notifications are blocked for DROP SPOT in your browser settings. Re-enable them there to
+        get call alerts.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3">
+      <p className="text-sm font-semibold text-slate-700">
+        {state === 'on' ? 'Notifications are on' : 'Notifications are off'}
+      </p>
+      {state === 'on' ? (
+        <button
+          type="button"
+          onClick={disable}
+          disabled={busy}
+          className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 disabled:opacity-50"
+        >
+          {busy ? 'Working…' : 'Turn off'}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={enable}
+          disabled={busy}
+          className="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {busy ? 'Enabling…' : 'Turn on'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
+  const [dob, setDob] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -48,6 +117,7 @@ export default function SettingsPage() {
       setName(data.user.name);
       setUsername(data.user.username);
       setBio(data.user.bio ?? '');
+      setDob(dobToInputValue(data.user.dob));
       setAvatarUrl(data.user.avatarUrl ?? null);
       setBannerUrl(data.user.bannerUrl ?? null);
       setLoading(false);
@@ -94,32 +164,26 @@ export default function SettingsPage() {
     if (removePhoto) {
       nextAvatarUrl = '';
     } else if (file) {
-      const form = new FormData();
-      form.append('file', file);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setError(upData.error ?? 'Photo upload failed.');
+      try {
+        nextAvatarUrl = await uploadFile(file);
+      } catch {
+        setError('Photo upload failed.');
         setBusy(false);
         return;
       }
-      nextAvatarUrl = upData.url;
     }
 
     let nextBannerUrl: string | undefined;
     if (removeBanner) {
       nextBannerUrl = '';
     } else if (bannerFile) {
-      const form = new FormData();
-      form.append('file', bannerFile);
-      const up = await fetch('/api/upload', { method: 'POST', body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setError(upData.error ?? 'Banner upload failed.');
+      try {
+        nextBannerUrl = await uploadFile(bannerFile);
+      } catch {
+        setError('Banner upload failed.');
         setBusy(false);
         return;
       }
-      nextBannerUrl = upData.url;
     }
 
     const res = await fetch('/api/auth/me', {
@@ -129,6 +193,7 @@ export default function SettingsPage() {
         name,
         username,
         bio,
+        dob: dob || undefined,
         ...(nextAvatarUrl !== undefined ? { avatarUrl: nextAvatarUrl } : {}),
         ...(nextBannerUrl !== undefined ? { bannerUrl: nextBannerUrl } : {}),
       }),
@@ -148,6 +213,7 @@ export default function SettingsPage() {
     setBannerFile(null);
     setRemoveBanner(false);
     setUsername(data.user.username);
+    setDob(dobToInputValue(data.user.dob));
     setSaved(true);
   }
 
@@ -349,6 +415,18 @@ export default function SettingsPage() {
               />
             </div>
 
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Date of birth</label>
+              <input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <p className="mt-1 text-xs text-slate-500">Shown on your profile.</p>
+            </div>
+
             {error && <p className="text-sm text-red-600">{error}</p>}
             {saved && <p className="text-sm text-green-600">Profile saved.</p>}
 
@@ -365,6 +443,14 @@ export default function SettingsPage() {
               </Link>
             </div>
           </form>
+        </div>
+
+        <div className="mt-4 rounded-3xl bg-white p-6 shadow-soft">
+          <h2 className="text-base font-bold">Notifications</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Get notified about video calls even when DROP SPOT is closed.
+          </p>
+          <PushSettingsRow />
         </div>
       </div>
     </main>

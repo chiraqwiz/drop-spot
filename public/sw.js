@@ -45,3 +45,46 @@ self.addEventListener('fetch', (event) => {
     fetch(request).catch(() => caches.match(request)),
   );
 });
+
+// Push notifications (e.g. incoming video calls), even with the app closed.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = data.title || 'DROP SPOT';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/logo.webp',
+      badge: '/logo.webp',
+      tag: data.tag || 'drop-spot',
+      renotify: true,
+      vibrate: data.vibrate || undefined,
+      requireInteraction: !!data.requireInteraction,
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            if ('navigate' in client && client.navigate) {
+              return client.navigate(url).then((c) => c.focus());
+            }
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) return self.clients.openWindow(url);
+      }),
+  );
+});

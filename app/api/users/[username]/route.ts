@@ -10,6 +10,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
     where: { username: params.username.toLowerCase() },
     select: {
       ...userPublicSelect,
+      dob: true,
       _count: { select: { followsReceived: true, followsGiven: true, posts: true } },
     },
   });
@@ -49,6 +50,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
       bio: profile.bio,
       avatarUrl: profile.avatarUrl,
       bannerUrl: profile.bannerUrl,
+      dob: profile.dob,
       isVerified: profile.isVerified,
       createdAt: profile.createdAt,
       counts: {
