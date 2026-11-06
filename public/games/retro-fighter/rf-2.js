@@ -1048,6 +1048,50 @@ function drawFx(g){
       g.fillStyle = "#ffd23f"; g.beginPath(); g.arc(pr.x, pr.y, 4, 0, 6.283); g.fill();
       return;
     }
+    if(pr.visual === "fan"){
+      var fa = pr.x * 0.06;
+      g.save(); g.translate(pr.x, pr.y); g.rotate(fa);
+      g.fillStyle = pr.color || "#ff8fc4";
+      for(var fi = 0; fi < 3; fi++){ g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 13, fi * 2.094 - 0.5, fi * 2.094 + 0.5); g.closePath(); g.fill(); }
+      g.restore();
+      g.fillStyle = "#ffd23f"; g.beginPath(); g.arc(pr.x, pr.y, 3, 0, 6.283); g.fill();
+      return;
+    }
+    if(pr.visual === "scream"){
+      g.strokeStyle = pr.color || "#c04df0"; g.lineWidth = 3;
+      var sa = (pr.x % 24) / 24;
+      g.globalAlpha = 0.9 - sa * 0.6;
+      g.beginPath(); g.arc(pr.x, pr.y, 6 + sa * 12, 0, 6.283); g.stroke();
+      g.beginPath(); g.arc(pr.x, pr.y, 3 + sa * 8, 0, 6.283); g.stroke();
+      g.globalAlpha = 1;
+      g.fillStyle = "#ffffff"; g.beginPath(); g.arc(pr.x, pr.y, 4, 0, 6.283); g.fill();
+      return;
+    }
+    if(pr.visual === "ring"){
+      g.strokeStyle = pr.color || "#ff8fc4"; g.lineWidth = 4;
+      g.beginPath(); g.arc(pr.x, pr.y, 10, 0, 6.283); g.stroke();
+      g.fillStyle = "#ffffff"; g.beginPath(); g.arc(pr.x, pr.y, 4, 0, 6.283); g.fill();
+      return;
+    }
+    if(pr.visual === "hat"){
+      var ha = pr.x * 0.08;
+      g.save(); g.translate(pr.x, pr.y); g.rotate(ha);
+      g.fillStyle = "#f2f2f2"; g.beginPath(); g.arc(0, -3, 8, 3.14159, 0); g.fill();
+      g.fillStyle = "#2b6fd6"; g.fillRect(-11, -4, 22, 4);
+      g.fillStyle = "#ffd23f"; g.font = "bold 9px sans-serif"; g.textAlign = "center"; g.fillText("23", 0, 2);
+      g.restore();
+      return;
+    }
+    if(pr.visual === "lure"){
+      var la = pr.x * 0.07;
+      g.save(); g.translate(pr.x, pr.y); g.rotate(la);
+      g.strokeStyle = "#e8e8e8"; g.lineWidth = 2;
+      g.beginPath(); g.arc(0, 0, 7, 0.3, 4.4); g.stroke();
+      g.fillStyle = "#ff2e2e"; g.beginPath(); g.arc(5, 5, 3, 0, 6.283); g.fill();
+      g.restore();
+      g.fillStyle = "#ffffff"; g.beginPath(); g.arc(pr.x, pr.y, 2, 0, 6.283); g.fill();
+      return;
+    }
     g.fillStyle = pr.color || "#ffd23f"; g.beginPath(); g.arc(pr.x, pr.y, 9, 0, 6.283); g.fill();
     g.fillStyle = "#fff7cc"; g.beginPath(); g.arc(pr.x, pr.y, 5, 0, 6.283); g.fill();
     g.fillStyle = "#b98a00"; g.fillRect(pr.x-12, pr.y-2, 4, 4); g.fillRect(pr.x+8, pr.y-2, 4, 4);

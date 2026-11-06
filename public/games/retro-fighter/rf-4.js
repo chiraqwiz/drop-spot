@@ -256,7 +256,7 @@ document.getElementById("startBtn").addEventListener("click", function(){ audio(
 document.getElementById("vsScreen").addEventListener("click", function(){ if(mode === "story" && screen === "vs"){ if(vsTimer) clearTimeout(vsTimer); showScreen("fight"); screen = "fight"; } });
 document.getElementById("modeCpu").addEventListener("click", function(){ if(net.connected || net.connecting || net.waiting) leaveOnline(); mode = "cpu"; syncModeDiff(); selStep = "p1"; document.getElementById("selectHeading").textContent = "CHOOSE YOUR FIGHTER"; });
 document.getElementById("mode2p").addEventListener("click", function(){ if(net.connected || net.connecting || net.waiting) leaveOnline(); mode = "2p"; syncModeDiff(); selStep = "p1"; document.getElementById("selectHeading").textContent = "CHOOSE YOUR FIGHTER"; });
-document.getElementById("modeStory").addEventListener("click", function(){ if(net.connected || net.connecting || net.waiting) leaveOnline(); mode = "story"; syncModeDiff(); selStep = "p1"; document.getElementById("selectHeading").textContent = "STORY MODE — CHOOSE YOUR FIGHTER"; document.getElementById("selectHint").textContent = "Fight through all six rivals and take the crown."; });
+document.getElementById("modeStory").addEventListener("click", function(){ if(net.connected || net.connecting || net.waiting) leaveOnline(); mode = "story"; syncModeDiff(); selStep = "p1"; document.getElementById("selectHeading").textContent = "STORY MODE — CHOOSE YOUR FIGHTER"; document.getElementById("selectHint").textContent = "Fight through all " + (ROSTER.length - 1) + " rivals and take the crown."; });
 document.getElementById("modeOnline").addEventListener("click", function(){
   mode = "online"; syncModeDiff(); selStep = "p1";
   document.getElementById("selectHeading").textContent = "FRIEND MATCH — CHOOSE YOUR FIGHTER";
@@ -501,7 +501,7 @@ function applyNetState(m){
     f.vx = s.vx; f.vy = s.vy; f.dir = s.dir;
     if((s.state === "ko" || s.state === "win") && f.state !== s.state){ f.state = s.state; f.stateT = s.stateT; }
   }
-  projectiles = (m.projectiles || []).map(function(p){ return { kind: p.kind, x: p.x, y: p.y, vx: p.vx, owner: p.owner, life: p.life, dmg: p.dmg, color: p.color }; });
+  projectiles = (m.projectiles || []).map(function(p){ return { kind: p.kind, visual: p.visual, x: p.x, y: p.y, vx: p.vx, owner: p.owner, life: p.life, dmg: p.dmg, color: p.color }; });
   strikes = (m.strikes || []).map(function(s){
     return { x: s.x, t: s.t, delay: s.delay, dur: s.dur, owner: s.owner, bolt: s.bolt, struck: !!s.struck };
   });
@@ -532,7 +532,7 @@ function netSendStatePing(t){
       fighters: fighters.map(function(f){
         return { x: f.x, y: f.y, vx: f.vx, vy: f.vy, dir: f.dir, hp: f.hp, dispHp: f.dispHp, meter: f.meter, state: f.state, stateT: f.stateT, hitStun: f.hitStun };
       }),
-      projectiles: projectiles.map(function(p){ return { x: p.x, y: p.y, vx: p.vx, owner: p.owner, life: p.life }; }),
+      projectiles: projectiles.map(function(p){ return { kind: p.kind, visual: p.visual, x: p.x, y: p.y, vx: p.vx, owner: p.owner, life: p.life, dmg: p.dmg, color: p.color }; }),
       strikes: strikes.map(function(s){ return { x: s.x, t: s.t, delay: s.delay, dur: s.dur, owner: s.owner, bolt: s.bolt, struck: !!s.struck }; })
     });
   }

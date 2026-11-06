@@ -81,7 +81,7 @@ function drawIntroBubble(g, f){
 }
 // ---------- Story mode: fight the ladder, take the crown ----------
 var storyIdx = 0, storyLadder = [], storyNext = false, storyRestart = false, vsTimer = null;
-var STORY_OPEN = "The crown of Chi-Town is up for grabs. Six fighters stand between you and the throne.";
+var STORY_OPEN = "The crown of Chi-Town is up for grabs. " + (ROSTER.length - 1) + " fighters stand between you and the throne.";
 var STORY_END = "The crown is yours. Chi-Town has a new champion.";
 var STORY_BEATS = {
   wiz: "The Lyrical Assassin himself steps onto the roof. Outrap the bars, outfight the fists.",
@@ -90,7 +90,10 @@ var STORY_BEATS = {
   crimson: "Crimson Curl waits on the rooftop, plaid pressed and fists ready. She does not lose at home.",
   babes: "Babes Club runs the night shift, and the captain doesn't share the floor. Make her move.",
   denim: "The dojo doors slide open. Denim bows once — then comes at you fast.",
-  wrap: "Wrap Warrior wears the crown. Take it from him."
+  wrap: "Wrap Warrior wears the crown. Take it from him.",
+  slick: "Slick G slides in smooth, cap low, chain shining. Do not let the smile fool you — the hat is sharp.",
+  richard: "Richard wades in off the dock, rod in hand. He has fished bigger things than you.",
+  nonilla: "No-Nilla is already warmed up, gloves up and grinning. No vanilla here — just hands."
 };
 function storyBeatText(){
   var opp = ROSTER[storyLadder[storyIdx]];
@@ -200,14 +203,16 @@ function trySpecial(f){
     burst(f.x + f.dir*40, f.y - 58, "#ffd23f", 6, 60);
   } else if(kind === "projectile"){
     sfx("special");
-    projectiles.push({ x: f.x + f.dir*40, y: f.y - 58, vx: f.dir*430, owner: f.side, life: 1.1, dmg: 12, color: "#ffd23f" });
-    burst(f.x + f.dir*40, f.y - 58, "#ffd23f", 6, 60);
+    var mkVis = { penny: "fan", crimson: "scream", slick: "hat", richard: "lure" }[f.def.id];
+    var mkCol = f.def.specialColor || "#ffd23f";
+    projectiles.push({ visual: mkVis, x: f.x + f.dir*40, y: f.y - 58, vx: f.dir*430, owner: f.side, life: 1.1, dmg: 12, color: mkCol });
+    burst(f.x + f.dir*40, f.y - 58, mkCol, 6, 60);
   } else if(kind === "barrage"){
     // Three shots at once — high, mid, low — each weaker than a
     // single blast, so the full spread only lands up close.
     sfx("special");
     [-72, -55, -38].forEach(function(dy){
-      projectiles.push({ x: f.x + f.dir*40, y: f.y + dy, vx: f.dir*430, owner: f.side, life: 1.1, dmg: 6, color: f.def.accent });
+      projectiles.push({ visual: "ring", x: f.x + f.dir*40, y: f.y + dy, vx: f.dir*430, owner: f.side, life: 1.1, dmg: 6, color: f.def.specialColor || f.def.accent });
     });
     burst(f.x + f.dir*40, f.y - 55, f.def.accent, 8, 70);
   } else if(kind === "slam"){
@@ -218,7 +223,7 @@ function trySpecial(f){
     burst(f.x, f.y - 90, f.def.accent, 8, 70);
   } else if(kind === "spin"){
     sfx("special");
-    burst(f.x, f.y - 55, f.def.accent, 10, 90);
+    burst(f.x, f.y - 55, f.def.specialColor || f.def.accent, 10, 90);
   } else if(kind === "tackle"){
     sfx("special");
     f.dashT = 0.42; f.vx = f.dir * 560;
@@ -234,7 +239,7 @@ function trySpecial(f){
   } else {
     sfx("special");
     f.dashT = 0.42; f.vx = f.dir * 520;
-    burst(f.x, f.y - 40, "#ff4fa3", 8, 80);
+    burst(f.x, f.y - 40, f.def.specialColor || "#ff4fa3", 8, 80);
   }
   return true;
 }
