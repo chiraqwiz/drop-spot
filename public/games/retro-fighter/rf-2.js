@@ -594,10 +594,19 @@ function drawKickLeg(g, f){
   g.strokeStyle = "#14141f"; g.lineWidth = 2;
   g.beginPath(); g.ellipse(footX + f.dir * 6, footY + 1, 12, 7, 0.12, 0, 6.283); g.stroke();
 }
+function drawFreeze(g, f){
+  if(!f.freezeT || f.freezeT <= 0 || f.state === "ko") return;
+  g.save();
+  g.globalAlpha = 0.45; g.fillStyle = "#bfe6ff";
+  g.beginPath(); g.ellipse(f.x, f.y - 62, 34, 62, 0, 0, 6.283); g.fill();
+  g.globalAlpha = 0.9; g.strokeStyle = "#ffffff"; g.lineWidth = 2;
+  g.beginPath(); g.ellipse(f.x, f.y - 62, 34, 62, 0, 0, 6.283); g.stroke();
+  g.restore();
+}
 function drawFighter(g, f, t){
   if(f.attack && f.attack.type === "teleport" && !f.attack.teleDone){ return; }
   var def = f.def, d = f.dir;
-  if(def.sprite && spriteReady[def.id]){ drawToonSprite(g, f, t); drawKickLeg(g, f); return; }
+  if(def.sprite && spriteReady[def.id]){ drawToonSprite(g, f, t); drawKickLeg(g, f); drawFreeze(g, f); return; }
   var flash = f.hitFlash > 0;
   var skin = flash ? "#ffffff" : def.skin, skinD = flash ? "#ffffff" : def.skinDark;
   var top = flash ? "#ffffff" : def.top, topD = flash ? "#dddddd" : def.topDark;
@@ -965,7 +974,7 @@ function callLightning(f){
   var opp = fighters[1 - f.side];
   var tx = opp ? opp.x : f.x + f.dir*120;
   tx = Math.max(30, Math.min(W-30, tx));
-  strikes.push({ x: tx, t: 0, delay: 0.45, dur: 0.68, owner: f.side, bolt: makeBolt(tx), struck: false });
+  strikes.push({ x: tx, t: 0, delay: 0.35, dur: 0.68, owner: f.side, bolt: makeBolt(tx), struck: false });
 }
 function updateFx(dt){
   skyFlash = Math.max(0, skyFlash - dt);
@@ -990,7 +999,7 @@ function updateFx(dt){
       var netGuestNoDamage = (typeof mode !== "undefined" && mode === "online" && typeof net !== "undefined" && net.connected && !net.isHost);
       if(!netGuestNoDamage && phase === "fight" && screen === "fight" && fighters.length === 2){
         var vic = fighters[1 - s.owner], atk = fighters[s.owner];
-        if(vic && vic.state !== "ko" && Math.abs(vic.x - s.x) < 30){
+        if(vic && vic.state !== "ko" && Math.abs(vic.x - s.x) < 60){
           applyHit(atk, vic, 12, 0.38, 220, true, vic.x, vic.y - 55);
         } else {
           burst(s.x, GROUND-4, "#8a8494", 6, 60);
@@ -1090,6 +1099,13 @@ function drawFx(g){
       g.fillStyle = "#ff2e2e"; g.beginPath(); g.arc(5, 5, 3, 0, 6.283); g.fill();
       g.restore();
       g.fillStyle = "#ffffff"; g.beginPath(); g.arc(pr.x, pr.y, 2, 0, 6.283); g.fill();
+      return;
+    }
+    if(pr.visual === "freeze"){
+      g.fillStyle = "#bfe6ff"; g.beginPath(); g.arc(pr.x, pr.y, 11, 0, 6.283); g.fill();
+      g.strokeStyle = "#ffffff"; g.lineWidth = 2;
+      for(var fi = 0; fi < 4; fi++){ var an = fi * 1.5708 + pr.x * 0.05; g.beginPath(); g.moveTo(pr.x + Math.cos(an) * 6, pr.y + Math.sin(an) * 6); g.lineTo(pr.x + Math.cos(an) * 13, pr.y + Math.sin(an) * 13); g.stroke(); }
+      g.fillStyle = "#ffffff"; g.beginPath(); g.arc(pr.x, pr.y, 4, 0, 6.283); g.fill();
       return;
     }
     g.fillStyle = pr.color || "#ffd23f"; g.beginPath(); g.arc(pr.x, pr.y, 9, 0, 6.283); g.fill();

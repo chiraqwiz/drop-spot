@@ -220,7 +220,42 @@ function startSelect(){
   syncPickAvailability(); markPicks(); gpSelIdx = 0; gpShowFocus();
   showScreen("select");
 }
+var INTRO_VIDEOS = {"babes": "https://traeyw0jxcp61nuu.public.blob.vercel-storage.com/media/1794017911729-babes-intro.mp4", "dojo": "https://traeyw0jxcp61nuu.public.blob.vercel-storage.com/media/1794016287305-dojo-intro.mp4", "konfu": "https://traeyw0jxcp61nuu.public.blob.vercel-storage.com/media/1794017888888-konfu-intro.mp4", "richard": "https://traeyw0jxcp61nuu.public.blob.vercel-storage.com/media/1794017930366-richard-intro.mp4", "wrap": "https://traeyw0jxcp61nuu.public.blob.vercel-storage.com/media/1794017900925-twinpenny-intro.mp4"};
+var dojoIntroDone = false;
+function showDojoIntro(fid, done){
+  var ov = document.getElementById("dojoIntro");
+  var vid = document.getElementById("dojoIntroVideo");
+  if(!ov || !vid || !INTRO_VIDEOS[fid]){ done(); return; }
+  var finished = false;
+  var watchdog = null;
+  function close(){
+    if(finished) return; finished = true;
+    if(watchdog) clearTimeout(watchdog);
+    try{ vid.pause(); }catch(e){}
+    ov.hidden = true;
+    done();
+  }
+  vid.onended = close;
+  vid.onerror = close;
+  document.getElementById("dojoIntroSkip").onclick = close;
+  vid.src = INTRO_VIDEOS[fid];
+  vid.muted = true; // start muted: muted autoplay is never blocked, so the video always shows; unmute once it is playing
+  ov.hidden = false;
+  watchdog = setTimeout(function(){ if(vid.readyState < 3){ close(); } }, 10000);
+  var pr = vid.play();
+  if(pr && pr.then) pr.then(function(){ if(soundOn){ try{ vid.muted = false; }catch(e){} } });
+  if(pr && pr.catch) pr.catch(function(){ close(); });
+}
 function beginVs(){
+  if(!dojoIntroDone){
+    var ivId = INTRO_VIDEOS[ROSTER[p1Sel].id] ? ROSTER[p1Sel].id : (INTRO_VIDEOS[ROSTER[p2Sel].id] ? ROSTER[p2Sel].id : null);
+    if(ivId){
+      dojoIntroDone = true;
+      showDojoIntro(ivId, function(){ beginVs(); });
+      return;
+    }
+  }
+  dojoIntroDone = false;
   if(mode !== "online") stageIdx = resolveStage();
   document.getElementById("vsName1").textContent = ROSTER[p1Sel].name;
   document.getElementById("vsName2").textContent = ROSTER[p2Sel].name + (mode === "cpu" ? " (CPU)" : mode === "online" ? " (FRIEND)" : "");
@@ -496,6 +531,7 @@ function applyNetState(m){
     f.hp = s.hp; f.dispHp = Math.max(s.hp, Math.min(f.dispHp, s.hp + 4));
     if(f.dispHp < s.hp) f.dispHp = s.hp;
     f.meter = s.meter;
+    f.freezeT = s.freezeT || 0;
     if(Math.abs(f.x - s.x) > 14) f.x = s.x;
     if(Math.abs(f.y - s.y) > 10) f.y = s.y;
     f.vx = s.vx; f.vy = s.vy; f.dir = s.dir;
@@ -530,7 +566,7 @@ function netSendStatePing(t){
       type: "state", timer: timer, phase: phase, phaseT: phaseT, banner: banner,
       wins: wins.slice(0, 2), roundNum: roundNum,
       fighters: fighters.map(function(f){
-        return { x: f.x, y: f.y, vx: f.vx, vy: f.vy, dir: f.dir, hp: f.hp, dispHp: f.dispHp, meter: f.meter, state: f.state, stateT: f.stateT, hitStun: f.hitStun };
+        return { x: f.x, y: f.y, vx: f.vx, vy: f.vy, dir: f.dir, hp: f.hp, dispHp: f.dispHp, meter: f.meter, state: f.state, stateT: f.stateT, hitStun: f.hitStun, freezeT: f.freezeT || 0 };
       }),
       projectiles: projectiles.map(function(p){ return { kind: p.kind, visual: p.visual, x: p.x, y: p.y, vx: p.vx, owner: p.owner, life: p.life, dmg: p.dmg, color: p.color }; }),
       strikes: strikes.map(function(s){ return { x: s.x, t: s.t, delay: s.delay, dur: s.dur, owner: s.owner, bolt: s.bolt, struck: !!s.struck }; })

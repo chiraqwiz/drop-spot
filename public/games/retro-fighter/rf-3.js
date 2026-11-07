@@ -27,7 +27,7 @@ function makeFighter(def, side){
     state: "idle", stateT: 0, attack: null, attackId: 0, attackHit: false,
     hitFlash: 0, hitStun: 0, blocking: false, crouching: false,
     walkPhase: 0, bobPhase: Math.random()*6, facing: side===0 ? 1 : -1,
-    dashT: 0, koDone: false, pullT: 0, pullFrom: 0, pullTarget: 0
+    dashT: 0, koDone: false, pullT: 0, pullFrom: 0, pullTarget: 0, freezeT: 0
   };
 }
 function syncTeleportBtn(){
@@ -93,7 +93,9 @@ var STORY_BEATS = {
   wrap: "Wrap Warrior wears the crown. Take it from him.",
   slick: "Slick G slides in smooth, cap low, chain shining. Do not let the smile fool you — the hat is sharp.",
   richard: "Richard wades in off the dock, rod in hand. He has fished bigger things than you.",
-  nonilla: "No-Nilla is already warmed up, gloves up and grinning. No vanilla here — just hands."
+  nonilla: "No-Nilla is already warmed up, gloves up and grinning. No vanilla here — just hands.",
+  dojo: "The dojo doors slide open and Dojo bows, black belt tied tight. Mind the ice — she fights like Sub-Zero.",
+  konfu: "Konfu steps out of the Subway lot, all white and gold. The B stands for boss — prove him wrong."
 };
 function storyBeatText(){
   var opp = ROSTER[storyLadder[storyIdx]];
@@ -203,7 +205,7 @@ function trySpecial(f){
     burst(f.x + f.dir*40, f.y - 58, "#ffd23f", 6, 60);
   } else if(kind === "projectile"){
     sfx("special");
-    var mkVis = { penny: "fan", crimson: "scream", slick: "hat", richard: "lure" }[f.def.id];
+    var mkVis = { penny: "fan", crimson: "scream", slick: "hat", richard: "lure", dojo: "freeze" }[f.def.id];
     var mkCol = f.def.specialColor || "#ffd23f";
     projectiles.push({ visual: mkVis, x: f.x + f.dir*40, y: f.y - 58, vx: f.dir*430, owner: f.side, life: 1.1, dmg: 12, color: mkCol });
     burst(f.x + f.dir*40, f.y - 58, mkCol, 6, 60);
@@ -230,7 +232,7 @@ function trySpecial(f){
     burst(f.x, f.y - 40, f.def.accent, 8, 80);
   } else if(kind === "lightning"){
     // Same 50-meter cost as every other special. The bolt is called
-    // down on the foe's spot at cast time and lands 0.45s later, so
+    // down on the foe's spot at cast time and lands 0.35s later, so
     // it can be stepped out of or blocked — and it deals the same
     // 12 damage / 0.38s stun / 220 knockback as Chi Raq Wiz's blast.
     sfx("charge");
@@ -568,6 +570,7 @@ function update(dt, t){
     var opp = fighters[1-idx];
     f.hitFlash = Math.max(0, f.hitFlash - dt);
     f.hitStun = Math.max(0, f.hitStun - dt);
+    f.freezeT = Math.max(0, (f.freezeT || 0) - dt);
     // facing
     if(f.state !== "ko" && f.hitStun <= 0) f.dir = opp.x >= f.x ? 1 : -1;
     // Scorpion spear pull: yanked toward the spearman, no control.
@@ -596,7 +599,7 @@ function update(dt, t){
     else inp = { left: held("p2","left"), right: held("p2","right"), up: held("p2","up"), down: held("p2","down"), block: held("p2","block") };
     var who = idx === 0 ? "p1" : "p2";
     var p = isRemote ? netFramePress : press[isLocalOnline ? "p1" : who];
-    var busy = f.attack !== null || f.hitStun > 0 || f.state === "ko" || f.pullT > 0;
+    var busy = f.attack !== null || f.hitStun > 0 || f.state === "ko" || f.pullT > 0 || f.freezeT > 0;
     var onGround = f.y >= GROUND - 1;
     // Held touch-pad buttons act like held gamepad buttons: holding
     // PUNCH on a phone repeats the punch instead of needing a
@@ -639,7 +642,7 @@ function update(dt, t){
     // punch, kick or special the very frame it started and the move
     // never showed. An attack now holds its pose; a jump is not
     // flattened back to walk/idle on its first frame.
-    var nowBusy = f.attack !== null || f.hitStun > 0 || f.state === "ko";
+    var nowBusy = f.attack !== null || f.hitStun > 0 || f.state === "ko" || f.freezeT > 0;
     f.blocking = false; f.crouching = false;
     if(!nowBusy && !justJumped){
       var mv = 0;
@@ -779,6 +782,13 @@ function update(dt, t){
               endRound(atk.side, "ko");
             }
           }
+        }
+        projectiles.splice(pi, 1);
+      } else if(pr.visual === "freeze"){
+        if(netGuestProj){ burst(pr.x, pr.y, pr.color || "#9fd8ff", 8, 80); }
+        else {
+          applyHit(atk, vic, 6, 0.38, 0, true);
+          if(vic.state !== "ko"){ vic.freezeT = 1.1; banner = "FROZEN!"; phaseT = 1.0; burst(pr.x, pr.y, "#bfe6ff", 12, 100); sfx("block"); }
         }
         projectiles.splice(pi, 1);
       } else {

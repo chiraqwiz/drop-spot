@@ -9,7 +9,7 @@ const GAMES = [
   {
     slug: 'retro-fighter',
     title: 'Retro Fighter',
-    tagline: '10 fighters, 5 Chicago stages — arcade, 2P or friend match online. Every fighter packs a Mortal Kombat legend\'s signature move.',
+    tagline: '12 fighters, 5 Chicago stages — arcade, 2P or friend match online. Every fighter packs a Mortal Kombat legend\'s signature move.',
     art: '🥊',
   },
   {

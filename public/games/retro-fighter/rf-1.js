@@ -127,6 +127,30 @@ var ROSTER = [
     top: "#f2f2f2", topDark: "#c9c9c9", pants: "#ddd6cc", pantsDark: "#a8a094",
     accent: "#ff2e2e", accentDark: "#b91c1c", shoe: "#f2f2f2", trim: "#ff2e2e",
     speed: 230, hp: 100
+  },
+  {
+    id: "dojo", name: "DOJO", title: "THE DOJO MASTER",
+    intro: "The dojo is my home. Your lesson starts now.",
+    voice: { pitch: 1.05, rate: 1.0 },
+    specialName: "ICE BLAST", specialKind: "projectile", specialColor: "#9fd8ff",
+    photo: "retro-fighter/img/dojo-photo.webp",
+    sprite: "retro-fighter/img/dojo-sprite.webp",
+    skin: "#e8b48c", skinDark: "#c08a5e", hair: "#4a3220", hairDark: "#2c1c10",
+    top: "#2b6fd6", topDark: "#1d4f9e", pants: "#1a1a1a", pantsDark: "#000000",
+    accent: "#9fd8ff", accentDark: "#4a90d9", shoe: "#f2f2f2", trim: "#9fd8ff",
+    speed: 210, hp: 100
+  },
+  {
+    id: "konfu", name: "KONFU", title: "THE BOSS IN WHITE",
+    intro: "All white, all business. The B stands for boss.",
+    voice: { pitch: 0.75, rate: 0.95 },
+    specialName: "LIGHTNING CALL", specialKind: "lightning", specialColor: "#7fd4ff",
+    photo: "retro-fighter/img/konfu-photo.webp",
+    sprite: "retro-fighter/img/konfu-sprite.webp",
+    skin: "#8a5a38", skinDark: "#5f3a22", hair: "#171210", hairDark: "#000000",
+    top: "#f2f2f2", topDark: "#c9c9c9", pants: "#f2f2f2", pantsDark: "#c9c9c9",
+    accent: "#ffd23f", accentDark: "#b98a00", shoe: "#f2f2f2", trim: "#ffd23f",
+    speed: 205, hp: 100
   }
 ];
 var LOCKED = [];

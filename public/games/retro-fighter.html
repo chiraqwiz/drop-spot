@@ -287,7 +287,7 @@
       <!-- TITLE -->
       <div class="overlay" id="titleScreen">
         <h1>RETRO<br/><span class="alt">FIGHTER</span></h1>
-        <p>Ten fighters. One rooftop. First to two rounds takes the night.</p>
+        <p>Twelve fighters. One rooftop. First to two rounds takes the night.</p>
         <p class="blink" style="font-family:'Press Start 2P',monospace;font-size:11px;color:#fff;letter-spacing:2px">PRESS START</p>
         <div class="btn-row">
           <button class="btn" id="startBtn" type="button">Start Game</button>
@@ -357,6 +357,12 @@
         </div>
         <p id="vsSub" style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ffb3b3;letter-spacing:2px">FIRST TO 2 ROUNDS</p>
         <p id="vsStory" hidden style="font-family:'Press Start 2P',monospace;font-size:8px;color:#fff;letter-spacing:1px;line-height:1.9;max-width:520px;margin:10px auto 0"></p>
+      </div>
+
+      <!-- DOJO INTRO VIDEO -->
+      <div class="overlay" id="dojoIntro" hidden style="background:rgba(0,0,0,.97);z-index:70">
+        <video id="dojoIntroVideo" playsinline preload="auto" style="max-height:70vh;max-width:94vw;border-radius:12px;box-shadow:0 0 40px rgba(53,224,230,.35)"></video>
+        <div class="btn-row" style="position:absolute;top:14px;right:14px;margin-top:0"><button class="btn" id="dojoIntroSkip" type="button">SKIP INTRO</button></div>
       </div>
 
       <!-- RESULT -->
@@ -459,7 +465,11 @@
       <div class="move"><b>Special: Razor-Rang — Jade</b><span>Spinning lure flies across the screen</span></div>
       <div class="move"><b>NO-NILLA — The Gym Brawler</b><span>Red curls, boxing gloves, plaid leggings</span></div>
       <div class="move"><b>Special: Bionic Dash — Jacqui Briggs</b><span>Gauntlet dash punch straight through</span></div>
-      <p class="roster-note" style="margin-top:12px"><b>Ten fighters in the ring.</b> Slick G, Richard and No-Nilla join the crew — every fighter now fights with a Mortal Kombat legend's signature move.</p>
+      <div class="move"><b>DOJO — The Dojo Master</b><span>Denim jacket, black gi, black belt</span></div>
+      <div class="move"><b>Special: Ice Blast — Sub-Zero</b><span>Ice blast freezes the foe solid for a second</span></div>
+      <div class="move"><b>KONFU — The Boss in White</b><span>All white, gold B chain, braids</span></div>
+      <div class="move"><b>Special: Lightning Call — Raiden</b><span>Calls lightning down on the foe</span></div>
+      <p class="roster-note" style="margin-top:12px"><b>Twelve fighters in the ring.</b> Konfu joins the crew — every fighter now fights with a Mortal Kombat legend's signature move.</p>
       <p class="roster-note" style="margin-top:8px"><b>Five stages.</b> Rooftop, L Train, Lakefront, Club Sequin and South Side Street — pick one on the select screen or let it roll random. In a friend match, the host picks the stage.</p>
     </section>
   </div>
