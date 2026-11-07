@@ -178,6 +178,23 @@ function loadSprite(def){
   return im;
 }
 ROSTER.forEach(loadSprite);
+var frameImgs = {};
+var FRAME_FILES = { idleB: "-idle-b.webp", walk: ["-walk-1.webp", "-walk-2.webp", "-walk-3.webp", "-walk-4.webp"], punch: "-punch.webp" };
+function frameURL(def, suffix){ return def.sprite.replace("-sprite.webp", suffix); }
+function loadFrames(def){
+  if(!def.sprite || frameImgs[def.id]) return;
+  var set = { idleB: null, walk: [], punch: null };
+  frameImgs[def.id] = set;
+  function loadOne(suffix, slot, idx){
+    var im = new Image();
+    im.onload = function(){ if(idx === undefined) set[slot] = im; else set[slot][idx] = im; };
+    im.src = frameURL(def, suffix);
+  }
+  loadOne(FRAME_FILES.idleB, "idleB");
+  FRAME_FILES.walk.forEach(function(s, i){ loadOne(s, "walk", i); });
+  loadOne(FRAME_FILES.punch, "punch");
+}
+ROSTER.forEach(loadFrames);
 var AC = null, soundOn = true;
 function audio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ AC=null; } }
   if(AC && AC.state === "suspended"){ AC.resume(); } return AC; }

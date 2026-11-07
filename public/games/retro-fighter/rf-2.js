@@ -430,8 +430,26 @@ function drawStreetBase(g, t){
   g.globalAlpha = 1;
   R(g, 0, H-14, W, 14, "#1c1820"); R(g, 0, H-14, W, 2, "#35e0e6");
 }
+function animFrame(f, t){
+  var set = frameImgs[f.def.id];
+  if(!set) return null;
+  function ready(im){ return im && im.complete && im.naturalWidth > 0 ? im : null; }
+  if(f.state === "walk" && set.walk.length === 4){
+    var idx = Math.floor((f.walkPhase || 0) / (Math.PI / 2)) % 4;
+    return ready(set.walk[idx]);
+  }
+  if(f.state === "idle"){
+    if(Math.floor(t * 1.8 + f.bobPhase) % 2 === 1) return ready(set.idleB);
+    return null;
+  }
+  if(f.state === "punch" && f.attack && f.attack.t >= ATTACKS.punch.startup){
+    return ready(set.punch);
+  }
+  return null;
+}
 function drawToonSprite(g, f, t){
-  var def = f.def, d = f.dir, spr = spriteImgs[def.id];
+  var def = f.def, d = f.dir, spr = animFrame(f, t) || spriteImgs[def.id];
+  var isBase = (spr === spriteImgs[def.id]);
   var h = 138, w = h * (spr.naturalWidth / spr.naturalHeight);
   // Special-ready aura: a warm glow under a charged fighter.
   if(f.meter >= 50 && f.state !== "ko"){
@@ -550,7 +568,7 @@ function drawToonSprite(g, f, t){
     g.beginPath(); g.moveTo((fistX+chinX)/2, chinY-6); g.lineTo((fistX+chinX)/2 + (Math.random()-0.5)*8, -h*1.18); g.stroke();
     g.restore();
   }
-  if(f.hitFlash > 0 && spriteFlash[def.id]){
+  if(isBase && f.hitFlash > 0 && spriteFlash[def.id]){
     g.globalAlpha = 0.75;
     g.drawImage(spriteFlash[def.id], -w/2, -h, w, h);
     g.globalAlpha = 1;
